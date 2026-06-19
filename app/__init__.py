@@ -137,22 +137,19 @@ jordan_travel = [
 # ── Hobbies data ─────────────────────────────────────────
 hobbies_data = [
     {
-        "name": "Maha",
-        "items": [
-            {"name": "Hobby 1", "description": "Short description.", "image": ""},
-        ],
+        "name": ["Music","Movies","Hiking"], "people": ["Maha", "Naro"]
     },
     {
-        "name": "Naro",
-        "items": [
-            {"name": "Hobby 1", "description": "Short description.", "image": ""},
-        ],
+        "name": ["Cooking"], "people": ["Maha", "Jordan"]
     },
     {
-        "name": "Jordan",
-        "items": [
-            {"name": "Hobby 1", "description": "Short description.", "image": ""},
-        ],
+        "name": ["Running","Football"], "people": ["Jordan"]
+    },
+    {
+        "name": ["Reading","Cycling"], "people": ["Maha"]
+    },
+    {
+        "name": ["Gaming"], "people": ["Naro"]
     },
 ]
 
@@ -190,4 +187,19 @@ def jordan():
 
 @app.route('/hobbies')
 def hobbies():
+    circle_positions = {
+        frozenset(["Maha"]): (155, 120),
+        frozenset(["Naro"]): (345, 120),
+        frozenset(["Jordan"]): (250, 255),
+
+        frozenset(["Maha", "Naro"]): (250, 120),
+        frozenset(["Maha", "Jordan"]): (210, 190),
+        frozenset(["Naro", "Jordan"]): (290, 190),
+
+        frozenset(["Maha", "Naro", "Jordan"]): (250, 160),
+    }
+    for hobby in hobbies_data:
+        key = frozenset(hobby["people"])
+        hobby["pos"] = circle_positions.get(key, (250, 175))
+    
     return render_template('hobbies.html', hobbies=hobbies_data)
