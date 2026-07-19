@@ -1,4 +1,8 @@
 import os
+import re
+import datetime
+from playhouse.shortcuts import model_to_dict
+from peewee import *
 from flask import Flask, render_template, request
 from dotenv import load_dotenv
 from peewee import MySQLDatabase
@@ -9,23 +13,25 @@ from playhouse.shortcuts import model_to_dict, Model, CharField, TextField, Date
 load_dotenv()
 app = Flask(__name__)
 
-mydb = MySQLDatabase(os.getenv("MYSQL_DATABASE"),
-    user=os.getenv("MYSQL_USER"),
-    password=os.getenv("MYSQL_PASSWORD"),
-    host=os.getenv("MYSQL_HOST"),
-    port=3306
-)
-
-print(mydb)
+if os.getenv("TESTING") == "true":
+    print("Running in test mode")
+    mydb = SqliteDatabase('file:memory?mode=memory&cache=shared', uri=True)
+else:
+    mydb = MySQLDatabase(os.getenv("MYSQL_DATABASE"),
+        user=os.getenv("MYSQL_USER"),
+        password=os.getenv("MYSQL_PASSWORD"),
+        host=os.getenv("MYSQL_HOST"),
+        port=3306
+    )
 
 class TimelinePost(Model):
-	name = CharField()
-	email = CharField()
-	content = TextField()
-	created_at = DateTimeField(default=datetime.now)
+    name = CharField()
+    email = CharField()
+    content = TextField()
+    created_at = DateTimeField(default=datetime.now)
 
-	class Meta:
-		database = mydb
+    class Meta:
+        database = mydb
 
 mydb.connect()
 mydb.create_tables([TimelinePost])
@@ -247,23 +253,33 @@ def hobbies():
 
     return render_template('hobbies.html', hobbies=hobbies_data)
 
+
+
 @app.route('/api/timeline_post', methods=['POST'])
 def post_time_line_post():
-	name = request.form['name']
-	email = request.form['email']
-	content = request.form['content']
-	timeline_post = TimelinePost.create(name=name, email=email, content=content)
+    name = request.form.get('name', '')
+    email = request.form.get('email', '')
+    content = request.form.get('content', '')
 
-	return model_to_dict(timeline_post)
+    if not name:
+        return "Invalid name", 400
+    if not content:
+        return "Invalid content", 400
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return "Invalid email", 400
+
+    timeline_post = TimelinePost.create(name=name, email=email, content=content)
+    return model_to_dict(timeline_post)
+
 
 @app.route('/api/timeline_post', methods=['GET'])
 def get_time_line_post():
-	return {
-		'timeline_posts': [
-			model_to_dict(p)
-			for p in TimelinePost.select().order_by(TimelinePost.created_at.desc())
-		]
-	}
+    return {
+        'timeline_posts': [
+            model_to_dict(p)
+            for p in TimelinePost.select().order_by(TimelinePost.created_at.desc())
+        ]
+    }
 
 @app.route('/api/timeline_post/<int:post_id>', methods=['DELETE'])
 def delete_time_line_post(post_id):
@@ -272,6 +288,7 @@ def delete_time_line_post(post_id):
 		return {'error': 'Post not found'}, 404
 	post.delete_instance()
 	return {'deleted': post_id}
+
 
 @app.route('/timeline')
 def timeline():
